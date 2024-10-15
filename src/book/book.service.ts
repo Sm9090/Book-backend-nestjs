@@ -4,9 +4,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Book, Category } from './Schemas/book.schema';
+import { Query } from 'express-serve-static-core';
 import mongoose from 'mongoose';
 import { UpdateBookDto } from './dtos/update-book.dto';
+import { Book } from './Schemas/book.schema';
 
 @Injectable()
 export class BookService {
@@ -15,12 +16,22 @@ export class BookService {
     private bookModel: mongoose.Model<Book>,
   ) {}
 
-  async findAll(): Promise<Book[]> {
-    const books = await this.bookModel.find();
+  async findAll(query: Query): Promise<Book[]> {
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 10;
+    const skip = limit * (page - 1)
+    const keyword = query.keyword
+      ? {
+          title: {
+            $regex: query.keyword,
+            $options: 'i',
+          },
+        }
+      : {};
+    const books = await this.bookModel.find({...keyword}).limit(limit).skip(skip);
     return books;
   }
   async createBook(book: Book): Promise<Book> {
-  
     const res = await this.bookModel.create(book);
     return res;
   }
@@ -43,7 +54,7 @@ export class BookService {
     return updatedBook;
   }
   async deleteById(id: string): Promise<Book> {
-    const updatedBook = await this.bookModel.findByIdAndDelete(id)
+    const updatedBook = await this.bookModel.findByIdAndDelete(id);
     return updatedBook;
   }
 }
