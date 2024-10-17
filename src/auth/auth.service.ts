@@ -1,11 +1,16 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { UsersService } from '../users/users.service';
-import { CreateUserDto } from 'src/users/dtos/create-user.dto';
-import * as bcrypt from 'bcryptjs';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
+import * as bcrypt from 'bcryptjs';
 import mongoose from 'mongoose';
-import { User } from 'src/users/schemas/user.schema';
+import { User } from 'src/auth/Schemas/user.schema';
+import { LoginInDto } from 'src/auth/dtos/LogIn.dto';
+import { SignUpDto } from 'src/auth/dtos/signUp.dto';
 
 @Injectable()
 export class AuthService {
@@ -14,8 +19,13 @@ export class AuthService {
     private UserModel: mongoose.Model<User>,
     private jwtService: JwtService,
   ) {}
-  async register(CreateUserDto: CreateUserDto): Promise<{ token: string }> {
+  async register(CreateUserDto: SignUpDto): Promise<{ token: string }> {
     const { name, email, password } = CreateUserDto;
+
+    const existedUser = await this.UserModel.findOne({ email });
+    if (existedUser) {
+      throw new ConflictException('Email Already exists');
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -27,14 +37,25 @@ export class AuthService {
     const token = this.jwtService.sign({ id: user._id });
     return { token };
   }
-  //   async signIn(email: string, pass: string): Promise<any> {
-  //     const user = await this.UserModel.findOne(email);
-  //     if (user?.password !== pass) {
-  //       throw new UnauthorizedException('Invalid Crendtial');
-  //     }
-  //     const { password, ...result } = user;
-  //     // TODO: Generate a JWT and return it here
-  //     // instead of the user object
-  //     return result;
-  //   }
+  async login(LoginDto: LoginInDto): Promise<{ token: string }> {
+    const { email, password } = LoginDto;
+    if (email === '' || password === '') {
+      throw new BadRequestException('Email or Password is required');
+    }
+    const existedUser = await this.UserModel.findOne({ email });
+
+    if(!existedUser){
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const isCorrectPassword = await bcrypt.compare(password , existedUser.password)
+    
+    if(!isCorrectPassword){
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const token = this.jwtService.sign({ id: existedUser._id });
+
+    return { token };
+  }
 }

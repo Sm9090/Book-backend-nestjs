@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
-import { IsEnum, IsNumber, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsEmpty, IsEnum, IsNumber, IsOptional, IsString, MinLength } from 'class-validator';
+import { User } from 'src/auth/Schemas/user.schema';
 import { Category } from '../Schemas/book.schema';
 
 export class CreateBookDto {
@@ -16,4 +17,6 @@ export class CreateBookDto {
   readonly price: number;
   @IsEnum(Category, { message: 'Category must be one of: Adventure, Classics, Crime, Fantasy' })
   readonly category: Category;
+  @IsEmpty({message: "you cannot pass user id"})
+  readonly user: User;
 }

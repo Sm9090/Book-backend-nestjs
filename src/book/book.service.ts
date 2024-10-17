@@ -8,6 +8,7 @@ import { Query } from 'express-serve-static-core';
 import mongoose from 'mongoose';
 import { UpdateBookDto } from './dtos/update-book.dto';
 import { Book } from './Schemas/book.schema';
+import { User } from 'src/auth/Schemas/user.schema';
 
 @Injectable()
 export class BookService {
@@ -31,7 +32,8 @@ export class BookService {
     const books = await this.bookModel.find({...keyword}).limit(limit).skip(skip);
     return books;
   }
-  async createBook(book: Book): Promise<Book> {
+  async createBook(book: Book ,user : User): Promise<Book> {
+    const data = Object.assign(book , {userId : user._id})
     const res = await this.bookModel.create(book);
     return res;
   }
@@ -46,7 +48,8 @@ export class BookService {
     }
     return book;
   }
-  async updateById(id: string, book: UpdateBookDto): Promise<Book> {
+  async updateById(id: string, book: UpdateBookDto , user : User): Promise<Book> {
+    const data = Object.assign(book , {userId: user._id})
     const updatedBook = await this.bookModel.findByIdAndUpdate(id, book, {
       new: true,
       runValidators: true,
